@@ -5,8 +5,8 @@ docker run -d \
   --ulimit stack=67108864 \
   -p 2522:22 \
   -v $SSH_AUTH_SOCK:/ssh-agent \
-  -e SSH_AUTH_SOCK=/ssh-agent \
+  -e SSH_AUTH_SOCK:=/ssh-agent \
+  -v ~/.gitconfig:/home/developer/.gitconfig \
   -v .:/code/tensorrt_llm_capi \
-  -v .:/code/tensorrt_llm \
   --name trtllm-capi-dev \
   htring/trtdev:1.0.0

@@ -37,12 +37,12 @@ RUN apt-get update && \
 RUN locale-gen en_US.UTF-8
 
 # --- 2. Unlock Python (Mandatory for Ubuntu 24.04) ---
-# The build_wheel.py script attempts to install 'virtualenv' to the system python.
-# We must remove the PEP 668 lock file to allow this.
 RUN rm -f /usr/lib/python3.*/EXTERNALLY-MANAGED
 
-# --- 3. SSH Configuration ---
+# --- 3. SSH Configuration (MODIFIED) ---
+# Added 'PermitUserEnvironment' so SSH sessions respect local vars
 RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config && \
     mkdir -p /var/run/sshd && \
     ssh-keygen -A
 
@@ -56,7 +56,6 @@ RUN (userdel -r ubuntu 2>/dev/null || true) && \
     echo '%developer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # --- 5. Environment Inheritance ---
-# Ensure developer inherits root's NVIDIA environment variables
 RUN echo "export PATH=${PATH}" >> /etc/profile && \
     echo "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> /etc/profile && \
     echo "export CUDA_HOME=${CUDA_HOME}" >> /etc/profile && \
@@ -67,15 +66,26 @@ RUN echo "export PATH=${PATH}" >> /etc/profile && \
 ARG CLION_INSTALL_DIR=/opt/jetbrains/clion
 COPY --from=builder ${CLION_INSTALL_DIR} ${CLION_INSTALL_DIR}
 
-# --- 7. Register IDE Backend ---
+# --- 7. Register IDE Backend & SSH Socket (MODIFIED) ---
 USER developer
 WORKDIR /home/developer
-RUN touch /home/developer/.hushlogin && \
+
+# [FIX] Prepend the export to .bashrc (Top of file strategy) and append to .profile
+# This ensures CLion non-interactive shells still see the socket.
+RUN echo "export SSH_AUTH_SOCK=/ssh-agent" > ~/.bashrc_temp && \
+    ([ -f ~/.bashrc ] && cat ~/.bashrc >> ~/.bashrc_temp || true) && \
+    mv ~/.bashrc_temp ~/.bashrc && \
+    echo "export SSH_AUTH_SOCK=/ssh-agent" >> ~/.profile && \
+    touch /home/developer/.hushlogin && \
     ${CLION_INSTALL_DIR}/bin/remote-dev-server.sh registerBackendLocationForGateway
 
 # --- 8. Entrypoint ---
 USER root
-RUN mkdir -p /code/tensorrt_llm
+
+# [FIX] Just create the generic parent folder.
+# We give ownership to developer so they can create folders if nothing is mounted.
+RUN mkdir -p /code && chown developer:developer /code
+
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
