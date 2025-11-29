@@ -2,11 +2,13 @@
 
 set -e
 
-cd tensorrt-llm
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/../tensorrt-llm"
 
-rm -rf cpp/build
-
-python3 ./scripts/build_wheel.py \
-    --clean \
+python3 scripts/build_wheel.py \
+    --generator "Ninja" \
     --cuda_architectures "86-real" \
-    --job_count 10 \
+    --job_count $(nproc) \
+    --build_type Release \
+    --use_ccache \
+    --install
