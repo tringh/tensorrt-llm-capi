@@ -6,7 +6,7 @@ ARG TRT_LLM_VERSION=latest
 # ==============================================================================
 FROM ubuntu:24.04 AS builder
 
-ARG CLION_VERSION=2025.2.1
+ARG CLION_VERSION=2025.2.4
 ENV CLION_VERSION=${CLION_VERSION}
 
 RUN apt-get update && \
