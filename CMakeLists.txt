@@ -94,12 +94,6 @@ set_source_files_properties(src/trtllm_capi.c PROPERTIES
 
 add_library(trtllm_capi SHARED src/trtllm_capi.c)
 
-set_target_properties(trtllm_capi PROPERTIES
-        INSTALL_RPATH "\$ORIGIN"
-        INSTALL_RPATH_USE_LINK_PATH TRUE
-        BUILD_WITH_INSTALL_RPATH TRUE
-)
-
 target_include_directories(trtllm_capi
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -118,6 +112,10 @@ target_link_libraries(trtllm_capi
         tensorrt_llm
         nvinfer_plugin_tensorrt_llm
         ${TensorRT_LIBRARIES}
+)
+
+target_link_options(trtllm_capi PRIVATE
+        "LINKER:-rpath,\$ORIGIN"
 )
 
 # Force load plugins (Linux specific)
