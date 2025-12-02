@@ -67,15 +67,13 @@ if(CUDAToolkit_VERSION VERSION_GREATER_EQUAL "11.0")
 endif()
 
 # ==============================================================================
-# 4. Import & Link (THE FIX IS HERE)
+# 4. Import & Link
 # ==============================================================================
 
 add_library(tensorrt_llm SHARED IMPORTED)
 set_target_properties(tensorrt_llm PROPERTIES
         IMPORTED_LOCATION ${TRTLLM_LIB_PATH}
         INTERFACE_INCLUDE_DIRECTORIES ${TRTLLM_INCLUDE_DIR}
-        # [RESTORED] This line fixes the 'missing cuda_runtime_api.h' error.
-        # It tells CMake: "Anyone using tensorrt_llm ALSO needs CUDA headers."
         INTERFACE_LINK_LIBRARIES "CUDA::cuda_driver;CUDA::cudart_static;CUDA::nvml"
 )
 
@@ -95,6 +93,12 @@ set_source_files_properties(src/trtllm_capi.c PROPERTIES
 )
 
 add_library(trtllm_capi SHARED src/trtllm_capi.c)
+
+set_target_properties(trtllm_capi PROPERTIES
+        # Sets the RPATH to $ORIGIN in the final binary
+        INSTALL_RPATH "\$ORIGIN"
+        BUILD_WITH_INSTALL_RPATH TRUE
+)
 
 target_include_directories(trtllm_capi
         PUBLIC
