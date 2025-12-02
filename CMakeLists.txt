@@ -95,8 +95,8 @@ set_source_files_properties(src/trtllm_capi.c PROPERTIES
 add_library(trtllm_capi SHARED src/trtllm_capi.c)
 
 set_target_properties(trtllm_capi PROPERTIES
-        # Sets the RPATH to $ORIGIN in the final binary
         INSTALL_RPATH "\$ORIGIN"
+        INSTALL_RPATH_USE_LINK_PATH TRUE
         BUILD_WITH_INSTALL_RPATH TRUE
 )
 
