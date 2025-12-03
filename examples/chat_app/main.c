@@ -3,17 +3,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <unistd.h> // For sleep()
+#include <unistd.h>
 
-// Include the wrapper header.
-// Ensure this filename matches what is inside your 'include' directory.
 #include "trtllm_capi.h"
 
 int main(int argc, char* argv[]) {
     printf("--- TensorRT-LLM C Interface Chatbot ---\n");
 
     // 1. Configuration
-    // Updated to point to your actual engine location found in /code/tensorrt_llm/engines/gpt2
     const char* model_path = "/code/tensorrt_llm_capi/engines/gpt2";
 
     if (argc > 1) {
@@ -23,7 +20,6 @@ int main(int argc, char* argv[]) {
     printf("Loading model from: %s\n", model_path);
 
     // 2. Initialize Executor
-    // We use TRT_MODEL_TYPE_DECODER_ONLY for standard LLMs (Llama, GPT, etc.)
     // max_beam_width = 1 means "Greedy Search" (fastest).
     TrtLlmExecutor* engine = trt_create_executor(model_path, TRT_MODEL_TYPE_DECODER_ONLY, 1);
 
@@ -34,7 +30,7 @@ int main(int argc, char* argv[]) {
     printf("Model loaded successfully.\n");
 
     // 3. Prepare Input Data
-    // Example: "Hello world" tokens. In a real app, you need a Tokenizer (like HuggingFace Tokenizers C binding).
+    // Example: "Hello world" tokens.
     // These IDs are hypothetical examples.
     int32_t input_ids[] = {15496, 995, 13}; // "Hello" " world" "."
     int input_len = 3;
@@ -93,18 +89,33 @@ int main(int argc, char* argv[]) {
                 is_finished = true;
             }
 
-            // Retrieve generated tokens
-            // Buffer size 128 is plenty for a single streaming chunk
-            int32_t token_buffer[128];
-            int num_tokens = trt_response_get_tokens(responses, i, token_buffer, 128);
+            // Retrieve generated tokens using the new two-step API
+            int token_count = trt_response_get_token_count(responses, i);
 
-            if (num_tokens > 0) {
-                printf("Received %d tokens: [ ", num_tokens);
-                for (int t = 0; t < num_tokens; ++t) {
-                    printf("%d ", token_buffer[t]);
+            if (token_count > 0) {
+                // Allocate exact buffer size needed
+                int32_t* token_buffer = (int32_t*)malloc(token_count * sizeof(int32_t));
+                if (!token_buffer) {
+                    fprintf(stderr, "Error: Failed to allocate token buffer.\n");
+                    continue;
                 }
-                printf("]\n");
-                fflush(stdout); // Ensure output prints immediately
+
+                int num_tokens = trt_response_get_tokens(responses, i, token_buffer, token_count);
+
+                if (num_tokens > 0) {
+                    printf("Received %d tokens: [ ", num_tokens);
+                    for (int t = 0; t < num_tokens; ++t) {
+                        printf("%d ", token_buffer[t]);
+                    }
+                    printf("]\n");
+                    fflush(stdout); // Ensure output prints immediately
+                } else if (num_tokens == -1) {
+                    fprintf(stderr, "Error: Failed to retrieve tokens.\n");
+                }
+
+                free(token_buffer);
+            } else if (token_count == -1) {
+                fprintf(stderr, "Error: Failed to get token count.\n");
             }
         }
 

@@ -166,13 +166,22 @@ extern "C"
     bool trt_response_is_final(TrtLlmResponseList* list, int index);
 
     /**
+     * Get the number of tokens in a response.
+     *
+     * @param list Response list
+     * @param index Response index within the list
+     * @return Number of tokens in the response, or -1 on error
+     */
+    int trt_response_get_token_count(TrtLlmResponseList* list, int index);
+
+    /**
      * Extract generated tokens from a response.
      *
      * @param list Response list
      * @param index Response index within the list
-     * @param out_buffer Buffer to write tokens to
-     * @param max_size Maximum number of tokens to write
-     * @return Number of tokens actually written
+     * @param out_buffer Buffer to write tokens to (must not be NULL)
+     * @param max_size Maximum number of tokens to write (must be >= token count)
+     * @return Number of tokens written, or -1 on error (including insufficient buffer)
      */
     int trt_response_get_tokens(TrtLlmResponseList* list, int index, int32_t* out_buffer, int max_size);
 

@@ -322,37 +322,43 @@ extern "C"
         return list->responses[index].getResult().isFinal;
     }
 
-    int trt_response_get_tokens(TrtLlmResponseList* list, int index, int32_t* out_buffer, int max_size)
+    int trt_response_get_token_count(TrtLlmResponseList* list, int index)
     {
-        if (!list || index < 0 || index >= static_cast<int>(list->responses.size()) || !out_buffer || max_size <= 0)
-        {
-            return 0;
-        }
+        if (!list || index < 0 || index >= static_cast<int>(list->responses.size()))
+            return -1;
 
         auto const& response = list->responses[index];
         if (response.hasError())
-        {
-            return 0;
-        }
+            return -1;
 
-        auto const& result = response.getResult();
-        auto const& tokens = result.outputTokenIds;
-
+        auto const& tokens = response.getResult().outputTokenIds;
         if (tokens.empty())
-        {
             return 0;
-        }
 
-        // Get first beam (beam 0)
+        return static_cast<int>(tokens[0].size());
+    }
+
+    int trt_response_get_tokens(TrtLlmResponseList* list, int index, int32_t* out_buffer, int max_size)
+    {
+        if (!list || index < 0 || index >= static_cast<int>(list->responses.size()) || !out_buffer || max_size <= 0)
+            return -1;
+
+        auto const& response = list->responses[index];
+        if (response.hasError())
+            return -1;
+
+        auto const& tokens = response.getResult().outputTokenIds;
+        if (tokens.empty())
+            return 0;
+
         auto const& beam0 = tokens[0];
-        int count = 0;
+        auto const beam_size = beam0.size();
 
-        for (size_t i = 0; i < beam0.size() && count < max_size; ++i)
-        {
-            out_buffer[count++] = beam0[i];
-        }
+        if (static_cast<size_t>(max_size) < beam_size)
+            return -1;
 
-        return count;
+        std::copy(beam0.begin(), beam0.end(), out_buffer);
+        return static_cast<int>(beam_size);
     }
 
     void trt_destroy_response_list(TrtLlmResponseList* list)
