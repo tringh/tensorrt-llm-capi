@@ -11,7 +11,7 @@ git lfs install && git lfs pull
 python3 scripts/build_wheel.py \
     --generator "Ninja" \
     --cuda_architectures "86-real" \
-    --job_count $(nproc) \
+    --job_count $(( $(nproc) / 2 )) \
     --build_type Release \
     --use_ccache \
     --install
